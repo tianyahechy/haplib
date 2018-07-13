@@ -1,6 +1,7 @@
 #pragma once
 #pragma warning( disable: 4996)
 #include "HAPLib.h"
+#include <string>
 
 BEGIN_NAMESPACE(HAPLIB)
 #define	LEN	128

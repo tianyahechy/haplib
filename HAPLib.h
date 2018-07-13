@@ -8,7 +8,7 @@
 //#endif
 
 #include "resource.h"		// Ö÷·ûºÅ
-#include "../Algolib/include_global.h"
+#include "../../Algolib/include_global.h"
 
 #define __HAPLIB__	1
 

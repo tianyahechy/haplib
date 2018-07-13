@@ -54,6 +54,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>E:\CP9004\ThirdpartyLib\gdal\x64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -102,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CacheQueue.cpp" />
+    <ClCompile Include="GDALFileManager.cpp" />
     <ClCompile Include="hapcfile.cpp" />
     <ClCompile Include="HAPLib.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -111,6 +113,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CacheQueue.h" />
+    <ClInclude Include="GDALFileManager.h" />
     <ClInclude Include="hapcfile.h" />
     <ClInclude Include="HAPLib.h" />
     <ClInclude Include="Resource.h" />
