@@ -165,3 +165,102 @@ bool CGDALFileManager::LoadFrom(const char * imfileName)
 	return true;
 	
 }
+
+void CGDALFileManager::GetDIMSDataByBlock(const DIMS& dims, int i, int NumOfBlock, BYTE ** data, int& dataSize)
+{
+	//获取波段数
+	int bands = m_header.m_nBands;
+	//每个波段有几块
+	int bandSize = NumOfBlock / bands;
+	//第i块为dims波段起始的第几块
+	int bandB = i % bandSize;
+	//第i块在dims第几个波段内(从1开始）
+	int bandNum = (i / bandSize + 1);
+	//真实波段序号
+	int RbandNum = 0;
+	int k = 0;
+	//用RbandNum代替bandNum,考虑到有可能中间一些波段用户没有选择，所以需要判断是在处理多光谱第几个波段了
+	while (RbandNum < bands)
+	{
+		if (dims.m_pBand[k])
+		{
+			k++;
+		}
+		RbandNum++;
+		if (k==bandNum)
+		{
+			break;
+		}
+	}
+
+	int DimsCol = dims.xEnd - dims.xStart;
+	int DimsRow = dims.yEnd - dims.yStart;
+	//大部分每个块有多少行，下取整
+	int BlockRowLen = DimsRow / bandSize;
+	//块在波段的起始行位置
+	int DimsBRow = bandB * BlockRowLen;
+	//块在图像的起始行位置
+	int ImBRow = dims.yStart + DimsBRow;
+	//每个波段的末尾都有余数加入最后一段
+	if ( i % bandSize == bandSize - 1)
+	{
+		int leaveB1o = dims.yEnd - ImBRow - BlockRowLen;
+		if (leaveB1o != 0)
+		{
+			BlockRowLen += leaveB1o;
+		}
+	}
+
+	GDALDataset * poDataset = (GDALDataset *)m_poDataset;
+	if (poDataset)
+	{
+		//从1开始
+		GDALRasterBand * poBand = poDataset->GetRasterBand(RbandNum);
+		data[0] = new BYTE[DimsCol * BlockRowLen * m_header.getBytesPerPt()];
+		poBand->RasterIO(GF_Read, dims.xStart, ImBRow, DimsCol, BlockRowLen, data[0], DimsCol, BlockRowLen, poBand->GetRasterDataType(), 0, 0);
+		dataSize = DimsCol * BlockRowLen * m_header.getBytesPerPt();
+		return;
+	}
+
+}
+
+void CGDALFileManager::GetDIMSDataByBlockInfo(SimDIMS * psBlockInfo, BYTE * data)
+{
+	int DimsRow = psBlockInfo->getHeight();
+	int DimsCol = psBlockInfo->getWidth();
+	GDALDataset * poDataset = (GDALDataset*)m_poDataset;
+	if (poDataset)
+	{
+		//从1开始
+		GDALRasterBand * poBand = poDataset->GetRasterBand(psBlockInfo->band + 1);
+		poBand->RasterIO(GF_Read, psBlockInfo->xStart,  psBlockInfo->yStart, DimsCol, DimsRow, data, DimsCol, DimsRow, poBand->GetRasterDataType(), 0, 0);
+		return;
+	}
+}
+
+bool CGDALFileManager::GetDIMSDataByBlockInfo(SimDIMS * psBlockInfo, DIMS* pDims, BYTE * data)
+{
+	//依据影像数据类型判断获取数据方式
+	if (psBlockInfo->xStart == -1)
+	{
+		return false;
+	}
+	int DimsRow = psBlockInfo->getHeight();
+	int DimsCol = psBlockInfo->getWidth();
+	CPLErr GdalErr = CE_None;
+	GDALDataset * poDataset = (GDALDataset*)m_poDataset;
+	if (poDataset)
+	{
+		//从1开始
+		GDALRasterBand * poBand;
+		int iImageBandNo = pDims->getImgBandNum(psBlockInfo->band);
+		//可能存在psblockinfo指定波段不存在情况，如图像很小，波段不多
+		if (iImageBandNo <= -1)
+		{
+			return false;
+		}
+		poBand = poDataset->GetRasterBand(iImageBandNo + 1);
+		GdalErr = poBand->RasterIO(GF_Read, pDims->xStart + psBlockInfo->xStart, pDims->yStart + psBlockInfo->yStart, DimsCol, DimsRow, data, DimsCol, DimsRow, poBand->GetRasterDataType(), 0, 0);
+	}
+	return true;
+}
