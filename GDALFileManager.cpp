@@ -418,3 +418,147 @@ bool CGDALFileManager::Open()
 	m_poDataset = (void *)poDataset;
 	return true;
 }
+           
+bool CGDALFileManager::SaveHeader(string sFileHeader)
+{
+	size_t headerSize = strlen(sFileHeader.c_str());
+	int len = strcmp(sFileHeader.c_str(), "");
+	if ( headerSize == 0 || len == 0 )
+	{
+		return false;
+	}
+	strcpy(m_szHeaderFileName, sFileHeader.c_str());
+
+	int iLines = m_header.m_nLines;
+	int iSamples = m_header.m_nSamples;
+	int iBands = m_header.m_nBands;
+	int iDataType = m_header.m_nDataType;
+
+	strcat(m_header.m_cDescription, "处理日期:");
+	char dbuffer[9];
+	char tbuffer[9];
+	_strdate(dbuffer);
+	strcat(m_header.m_cDescription, dbuffer);
+	strcat(m_header.m_cDescription, ",处理时间: ");
+	_strtime(tbuffer);
+	strcat(m_header.m_cDescription, ",HAPIMG File V1.0 created by spacestartMan");
+	strcpy(m_header.m_cInterLeave, "bsq");
+	m_header.m_nHeaderOffset = 0;
+	strcpy(m_header.m_cFileType, "ENVI Standard");
+	string l_str1;
+	char l_str2[512];
+	sprintf(l_str2, "ENVI\n[HAPIMG]\n");
+	l_str1 += l_str2;
+	sprintf(l_str2, "description = {\n%s}\n", m_header.m_cDescription);
+	l_str1 += l_str2;
+	sprintf(l_str2,
+		"sample = %d\n lines = %d\n bands = %d\n data type = %d\n header offset = %d\n",
+		iSamples,
+		iLines,
+		iBands,
+		iDataType,
+		m_header.m_nHeaderOffset);
+	l_str1 += l_str2;
+	sprintf(l_str2, "file type = %s\ninterleave = %s\n", m_header.m_cFileType, m_header.m_cInterLeave);
+	l_str1 += l_str2;
+
+	//添加投影信息
+	if (m_header.m_MapInfo != NULL)
+	{
+		char * projectName = m_header.m_MapInfo->m_cProName;
+		//分辨率有时很小，有指数形式表示
+		sprintf(l_str2, "map info = {%s, %.4f, %.4f, %.4f, %.4f, %.4e, %.4e",
+			projectName, 1.0, 1.0, m_header.m_MapInfo->m_dLeftUpper[0], m_header.m_MapInfo->m_dLeftUpper[1],
+			m_header.m_MapInfo->m_dPixelSize[0],
+			abs(m_header.m_MapInfo->m_dPixelSize[1]));
+		l_str1 += l_str2;
+		if (strcmp(projectName, "UTM") == 0 )
+		{
+			char cpUTMns[10];
+			strcpy(cpUTMns, (m_header.m_MapInfo->m_UTM.m_NS == true) ? "North" : "South");
+			sprintf(l_str2, "%s, units = %s}\n", "WGS-84", m_header.m_MapInfo->m_cUnit);
+			l_str1 += l_str2;
+			if (strcmp(m_header.m_MapInfo->m_cDatum, "WGS_1984") == 0 )
+			{
+				sprintf(l_str2, "units = %s\n", m_header.m_MapInfo->m_cUnit);
+				l_str1 += l_str2;
+			}
+		}
+		else
+		{
+			sprintf(l_str2, "%s, units = %s}\n", m_header.m_MapInfo->m_cDatum, m_header.m_MapInfo->m_cUnit);
+			l_str1 += l_str2;
+		}
+	}
+	FILE * fp;
+	if ((fp = fopen(sFileHeader.c_str(), "w") ) == NULL )
+	{
+		printf("%s can not be opened for writing!", sFileHeader);
+		return false;
+	}
+	fprintf(fp, "%s\n", l_str1.c_str());
+	fclose(fp);
+	return true;
+}
+
+bool CGDALFileManager::WWriteBlock2(BYTE * pdata, int bufferSize, int writedoneBuffer)
+{
+	//获取图像基本信息
+	int width = m_header.m_nSamples;
+	int height = m_header.m_nLines;
+	int band = m_header.m_nBands;
+	int nDt = m_header.getBytesPerPt(); 
+
+	//获取图像一个波段字节数
+	__int64 bytesPerBand = width * height * nDt;
+	//计算每个波段数要输入的buffer大小
+	int bufferPerBand = bufferSize / band;
+	//获取当前准备存储的文件指针位置
+	__int64 currentPos = ftell(m_OutFile);
+	//开始在每个波段写入数据
+	long i;
+	for ( i = 0; i < band; i++)
+	{
+		//文件指针移动
+		//支持超过4G数据的写入寻址
+		_fseeki64(m_OutFile, __int64(i*bytesPerBand + currentPos), 0);
+		fwrite(pdata + i * bufferPerBand, sizeof(BYTE), bufferPerBand, m_OutFile);
+	}
+	//支持超过4G数据的写入寻址
+	_fseeki64(m_OutFile, __int64((1 - band) * bytesPerBand), 1);
+	return true;
+}
+
+bool CGDALFileManager::WWriteBlockB(BYTE * pdata, int bufferSize)
+{
+	//获取图像基本信息
+	int width = m_header.m_nSamples;
+	int height = m_header.m_nLines;
+	int band = m_header.m_nBands;
+	int nDt = m_header.getBytesPerPt();
+
+	//获取图像一个波段字节数
+	__int64 bytesPerBand = width * height * nDt;
+	//计算每个波段数要输入的buffer大小
+	int bufferPerBand = bufferSize / band;
+	BYTE * pbbandblock = new BYTE[bufferPerBand];
+
+	//开始在每个波段写入数据
+	long i, j;
+	for (i = 0; i < band; i++)
+	{
+		//将123 123 123 ...存储方式换成111.222.333
+		for ( j = 0; j < bufferPerBand / nDt; j++)
+		{
+			memcpy(pbbandblock + j * nDt, pdata + (j*band + i) * nDt, nDt);
+		}
+		//文件指针移动
+		//支持超过4G数据的写入寻址
+		_fseeki64(m_OutFile, __int64(i*bytesPerBand), 0);
+		fwrite(pbbandblock, sizeof(BYTE), bufferPerBand, m_OutFile);
+	}
+	//支持超过4G数据的写入寻址
+	_fseeki64(m_OutFile, __int64((1 - band) * bytesPerBand), 1);
+	delete pbbandblock;
+	return true;
+}
