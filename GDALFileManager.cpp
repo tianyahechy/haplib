@@ -1,6 +1,7 @@
 #include "GDALFileManager.h"
 #include "gdal_priv.h"
 #include "ogr_spatialref.h"
+#include <string>
 
 //缓存开辟大小
 int HAPLIB::g_BlockSize = 16 * 1024 * 1024;
@@ -262,5 +263,158 @@ bool CGDALFileManager::GetDIMSDataByBlockInfo(SimDIMS * psBlockInfo, DIMS* pDims
 		poBand = poDataset->GetRasterBand(iImageBandNo + 1);
 		GdalErr = poBand->RasterIO(GF_Read, pDims->xStart + psBlockInfo->xStart, pDims->yStart + psBlockInfo->yStart, DimsCol, DimsRow, data, DimsCol, DimsRow, poBand->GetRasterDataType(), 0, 0);
 	}
+	return true;
+}
+
+bool CGDALFileManager::WGetDIMSDataByBlockInfo(SimDIMS * psBlockInfo, DIMS* pDims, BYTE * data)
+{
+	int bands = pDims->getDIMSBands();
+	if (bands != psBlockInfo->band)
+	{
+		return false;
+	}
+
+	int DimsRow = psBlockInfo->getHeight();
+	int DimsCol = psBlockInfo->getWidth();
+	//获取波段数目和波段数组
+	int * pBandArray = new int[bands];
+	int i = 0; 
+	int j = 0;
+	for ( i = 0; i < m_header.m_nBands; i++)
+	{
+		if (pDims->m_pBand[i])
+		{
+			pBandArray[j] = i + 1;
+			j++;
+		}
+	}
+	GDALDataset * poDataset = (GDALDataset*)m_poDataset;
+	//读取多波段数组，存储为BSQ格式
+	if (poDataset)
+	{
+		poDataset->RasterIO(
+			GF_Read, 
+			pDims->xStart + psBlockInfo->xStart, 
+			pDims->yStart + psBlockInfo->yStart, 
+			DimsCol, 
+			DimsRow, 
+			data, 
+			DimsCol, 
+			DimsRow, 
+			poDataset->GetRasterBand(1)->GetRasterDataType(),
+			bands,
+			pBandArray,
+			0, 
+			0,
+			0);
+	}
+	delete[] pBandArray;
+	return true;
+}
+
+//文件图像属性
+void CGDALFileManager::GetFileName(char fileName[])
+{
+	if ( !fileName)
+	{
+		memcpy(fileName, m_szFileName, HAP_MAX_PATH);
+	}
+	return;
+}
+
+void CGDALFileManager::SetFileName(const char* fileName)
+{
+	memcpy(m_szFileName, fileName, HAP_MAX_PATH);
+
+}
+
+//保存类方法
+bool CGDALFileManager::HpsSaveImageAs(const char * szImageName)
+{
+	char szExt[_MAX_EXT] = "";
+	char * pszFormat;
+	_splitpath(szImageName, NULL, NULL, NULL, szExt);
+	if (stricmp(".img", szExt) == 0 || stricmp(".hap", szExt)  == 0 )
+	{
+		pszFormat = "HAPFile";
+		this->SetFileName(szImageName);
+		std::string CSFileName;
+		CSFileName.append(szImageName);
+
+		std::string SBaseNameHeader;
+		basic_string<char>::size_type indexCh;
+		static const basic_string<char>::size_type nPos = -1;
+		indexCh = CSFileName.rfind(".");
+		if (indexCh == nPos)
+		{
+			SBaseNameHeader = CSFileName + ".hdr";
+		}
+		else
+		{
+			string SBaseName = CSFileName.substr(0, indexCh);
+			SBaseNameHeader = SBaseName + ".hdr";
+		}
+		this->SaveHeader(SBaseNameHeader);
+		if ( ( m_OutFile = fopen(szImageName, "wb") ) == NULL)
+		{
+			sprintf(pcErrMessage, "Error:\n %s\n File could not be opened!", szImageName);
+			m_OutFile = NULL;
+			exit(0);
+			return false;
+		}
+	}
+	else
+	{
+		return false;
+	}
+	return true;
+
+}
+
+bool CGDALFileManager::WriteBlock(BYTE * pdata, int bufferSize)
+{
+	fwrite(pdata, sizeof(BYTE), bufferSize, m_OutFile);
+	return true;
+}
+
+bool CGDALFileManager::WriteBlockByInfo(BYTE * pdata, SimDIMS * pSBlockInfo)
+{
+	return true;
+}
+
+//模式管理
+bool CGDALFileManager::BoolIsImgInMem()
+{
+	//非内存模式
+	return false;
+}
+
+//关闭输出文件
+void CGDALFileManager::Close()
+{
+	if (m_OutFile != NULL)
+	{
+		fclose(m_OutFile);
+		m_OutFile = NULL;
+		this->Open();	//变为输入文件，便于流程化管理
+	}
+	return;
+}
+
+//打开已经关闭的生成的图像
+bool CGDALFileManager::Open()
+{
+	if (strcmp(m_szFileName,"") == 0 )
+	{
+		return false;
+	}
+	if (m_poDataset != NULL)
+	{
+		return false;
+	}
+	m_HAPFlag = 0;
+	GDALAllRegister();
+	GDALDataset * poDataset = (GDALDataset *)GDALOpen(m_szFileName, GA_ReadOnly);
+	m_poDataset = (void *)poDataset;
 	return true;
 }
