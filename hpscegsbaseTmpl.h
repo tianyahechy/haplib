@@ -87,15 +87,20 @@ public:
 	//输入二级缓冲区
 	SimDIMS m_SBlockIn2;
 
-	//输出一级缓冲区
-	SimDIMS m_SBlockOut;
-	//输出二级缓冲区
-	SimDIMS m_SBlockOut2;
+	//输入一级缓冲区
+	BYTE * m_bBlockIn;
+	//输入二级缓冲区
+	BYTE * m_bBlockIn2;
+	//写出内存缓冲区，一级缓冲区
+	BYTE * m_bBlockOut;
+	//写出内存缓冲区，二级缓冲区
+	BYTE * m_bBlockOut2;
 
 	//已输出的像元数,一级写缓冲区状态标记，一级写缓存区状态标记；-1表示缓冲区进入无效状态
 	int m_WriteDoneCount;
 	//已输出的像元数,二级写缓冲区状态标记，一级写缓存区状态标记；-1表示缓冲区进入无效状态
 	int m_WriteDoneCount2;
+
 	//标记哪号缓冲区即将丢弃
 	int m_iRejectCacheFlag;
 	//0为write,1为wwrite

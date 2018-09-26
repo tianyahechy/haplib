@@ -107,6 +107,7 @@
     <ClCompile Include="hapcfile.cpp" />
     <ClCompile Include="HAPLib.cpp" />
     <ClCompile Include="HPSCEGSBaseTmpl.cpp" />
+    <ClCompile Include="MyTimer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -118,6 +119,7 @@
     <ClInclude Include="hapcfile.h" />
     <ClInclude Include="HAPLib.h" />
     <ClInclude Include="hpscegsbaseTmpl.h" />
+    <ClInclude Include="MyTimer.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
