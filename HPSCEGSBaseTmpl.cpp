@@ -551,6 +551,91 @@ bool HAPBEGBase::Write(void * pValue)
 	//根据输入块申请内存
 	if (m_OutInMem)
 	{
-
+		if (m_WriteDoneCount < m_OutBufferSize)
+		{
+			memcpy(&m_bBlockOut[m_WriteDoneCount*m_nPtLengthOut], pValue, m_nPtLength);
+			m_WriteDoneCount++;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
+
+	if (m_bBlockOut == NULL)
+	{
+		m_OutBufferSize = g_BlockSize / m_nPtLength;
+		m_bBlockOut = new BYTE[m_OutBufferSize * m_nPtLength];
+		m_WriteDoneCount = 0;
+	}
+
+	memcpy(m_bBlockOut + m_WriteDoneCount * m_nPtLength, pValue, m_nPtLength);
+	m_WriteDoneCount++;
+	if (m_WriteDoneCount == m_OutBufferSize)
+	{
+		//写入块
+		m_MgrOut->WriteBlock(m_bBlockOut, m_OutBufferSize * m_nPtLength);
+		m_WriteDoneCount = 0;
+	}
+	return true;
 }
+
+
+bool HAPBEGBase::WWrite(void * pValue, int band)
+{
+	m_writeFlag = 1;
+	//获取波段数
+	int nBands = m_MgrOut->m_header.m_nBands;
+	if (m_bBlockOut == NULL)
+	{
+		m_OutBufferSize = int(g_BlockSize / m_nPtLength / nBands) * nBands;
+		m_bBlockOut = new BYTE[m_OutBufferSize * m_nPtLength];
+		m_WriteDoneCount = 0;
+		m_writePos = 0;
+	}
+	//获取每个波段在m_OutBufferSize中的字节长度
+	int bytesPerBand = (m_OutBufferSize* m_nPtLength) / nBands;
+	//根据输入块申请内存
+	if (m_OutInMem)
+	{
+		if (m_WriteDoneCount < bytesPerBand)
+		{
+			memcpy(&m_bBlockOut[m_WriteDoneCount*m_nPtLengthOut], pValue, m_nPtLength);
+			m_WriteDoneCount++;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	if (m_bBlockOut == NULL)
+	{
+		m_OutBufferSize = g_BlockSize / m_nPtLength;
+		m_bBlockOut = new BYTE[m_OutBufferSize * m_nPtLength];
+		m_WriteDoneCount = 0;
+	}
+
+	memcpy(m_bBlockOut + m_WriteDoneCount * m_nPtLength, pValue, m_nPtLength);
+	m_WriteDoneCount++;
+	if (m_WriteDoneCount == m_OutBufferSize)
+	{
+		//写入块
+		m_MgrOut->WriteBlock(m_bBlockOut, m_OutBufferSize * m_nPtLength);
+		m_WriteDoneCount = 0;
+	}
+	return true;
+}
+
+CGDALFileManager * HAPBEGBase::Get_MgrIn()
+{
+	return m_MgrIn;
+}
+
+CGDALFileManager * HAPBEGBase::Get_MgrOut()
+{
+	return m_MgrOut;
+}
+
