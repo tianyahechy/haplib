@@ -116,6 +116,7 @@
   <ItemGroup>
     <ClInclude Include="CacheQueue.h" />
     <ClInclude Include="GDALFileManager.h" />
+    <ClInclude Include="HAPBEGTBase.h" />
     <ClInclude Include="hapcfile.h" />
     <ClInclude Include="HAPLib.h" />
     <ClInclude Include="hpscegsbaseTmpl.h" />
