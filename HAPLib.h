@@ -93,6 +93,13 @@ typedef enum
 	HAP_UInt16		= 12		//16位无符号整型
 }HAPDataType;
 
+//统计图像信息结构体，存放包括遥感图像的最大值、最小值、均值、标准差，直方图等信息。避免对图像的反复统计，这里一次性记录
+struct HAPCLASS StImgSta
+{
+	float fMax;
+	float fMin;
+
+};
 //缓存区信息结构，Simple Dims其中的成员不可直接映射到图像上指定位置，
 //用途:用于底层缓存信息标记
 //SIMDIMS需要联合对应的图像DIMS才能够映射到图像中的信息结构

@@ -152,8 +152,6 @@ struct HAPCLASS	MapInfo
 		strcpy(m_cDatum, mpinfo.m_cDatum);
 		return *this;
 	}
-
-
 };
 
 struct HAPCLASS ProjectInfo
@@ -211,6 +209,7 @@ struct HAPCLASS ProjectInfo
 			m_nPathNum		= -99999;
 			m_nPathFlag		= -99999;
 			m_dLat0			= -99999;
+			m_dLon0			= -99999;
 			m_dLat1			= -99999;
 			m_dLon1			= -99999;
 			m_dLat2			= -99999;
@@ -224,10 +223,6 @@ struct HAPCLASS ProjectInfo
 			m_dHeight		= -99999;
 
 		}
-
-
-
-
 	};
 	
 	//投影代号
@@ -294,9 +289,9 @@ struct HAPCLASS HAPCFileHeader
 	//(head8)
 	int m_nByteOrder;
 	//X轴起始值
-	double m_dXStart;
+	int m_dXStart;
 	//Y轴起始值
-	double m_dYStart;
+	int m_dYStart;
 	//默认波段
 	int m_nDefaultBands[3];
 	//区域范围

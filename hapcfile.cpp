@@ -35,8 +35,6 @@ HAPCFileHeader::HAPCFileHeader()
 	m_nLines = -1;
 	//波段数(head6)
 	m_nBands = -1;
-	//文件头偏移(head9)
-	m_nHeaderOffset = -1;
 	//文件类型
 	memset( m_cFileType, 0,32);
 	//数据类型(head7)
@@ -45,12 +43,28 @@ HAPCFileHeader::HAPCFileHeader()
 	memset(m_cInterLeave, 0, 8);
 	//传感类型
 	memset(m_cSensorType, 0, 32);
+	memset(m_sStretchType, 0, 16);
+
 	//(head8)
 	m_nByteOrder = -1;
 	//X轴起始值
-	m_dXStart = -1;
+	m_dXStart = 0;
 	//Y轴起始值
-	m_dYStart = -1;
+	m_dYStart = 0;
+	//区域平均值
+	m_fPlotAverage = -1;
+	//拉伸
+	m_nStretch = -1;
+	m_dxOffset = -1;
+	m_dyOffset = -1;
+	m_cSpectraName = NULL;
+	//主要版本信息(head2)
+	m_nVersionMajor = -1;
+	//次要版本信息(head3)
+	m_nVersionMinor = -1;
+	//系统类型ID（head1)
+	m_dwID = 16435;
+	m_nHeaderOffset = -1;
 	//默认波段
 	for (size_t i = 0; i < 3; i++)
 	{
@@ -61,18 +75,12 @@ HAPCFileHeader::HAPCFileHeader()
 	{
 		m_dPlotRange[i] = -1;
 	}
-	//区域平均值
-	m_fPlotAverage = -1;
 	//区域标题
 	for (size_t i = 0; i < 2; i++)
 	{
 		m_cPlotTitle[i] = new char[32];
 		memset(m_cPlotTitle[i], 0, 32);
 	}
-	//拉伸
-	m_nStretch = -1;
-	//拉伸模式
-	memset(m_sStretchType, 0, 16);
 	//各波段名称
 	//各波段波长
 	for (size_t i = 0; i < MAXBAND; i++)
@@ -81,19 +89,15 @@ HAPCFileHeader::HAPCFileHeader()
 		memset(m_cBandNames[i], 0, NAMELEN);
 		m_dWaveLength[i] = m_dFwhm[i] = -1;
 	}
-	m_dxOffset = -1;
-	m_dyOffset = -1;
-	m_cSpectraName = NULL;
+	for (int i = 0; i < 2; i++)
+	{
+		m_cPlotTitle[i] = new char[32];
+		memset(m_cPlotTitle[i], 0, 32);
+	}
 	//地图信息
 	m_MapInfo = NULL;
 	//投影信息
 	m_ProjectInfo = NULL;
-	//主要版本信息(head2)
-	m_nVersionMajor = -1;
-	//次要版本信息(head3)
-	m_nVersionMinor = -1;
-	//系统类型ID（head1)
-	m_dwID = 16435;
 }
 
 HAPCFileHeader& HAPCFileHeader::operator= (const HAPCFileHeader & header)
