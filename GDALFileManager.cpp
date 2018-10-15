@@ -18,12 +18,25 @@ CGDALFileManager::CGDALFileManager()
 	strcpy(m_szFileName, ""); 
 }
 
+//是否能调用GDALDestroyDriverManager函数
+int CGDALFileManager::iNeedDestroyGDAL = 0;
 CGDALFileManager::CGDALFileManager()
 {
 	if (m_poDataset)
 	{
 		GDALClose((GDALDataset *)m_poDataset);
-		GDALDestroyDriverManager();
+		if (iNeedDestroyGDAL == 0)
+		{
+			GDALDestroyDriverManager();
+		}
+		else if (iNeedDestroyGDAL > 0)
+		{
+			iNeedDestroyGDAL--;
+		}
+		else
+		{
+			strcpy(pcErrMessage, "GDAL准备退出，可能有文件没有析构！");
+		}
 	}
 	if (m_OutFile)
 	{
@@ -36,6 +49,8 @@ bool CGDALFileManager::LoadFrom(const char * imfileName)
 {
 	m_HAPFlag = 0;
 	GDALAllRegister();
+	iNeedDestroyGDAL++;
+	CPLSetConfigOption("GDAL_FILENAME_IS_UTF8", "NO");
 	GDALDataset * poDataSet = (GDALDataset*)GDALOpen(imfileName, GA_ReadOnly);
 	//保存gdal调用地址
 	m_poDataset = (void*)poDataSet;
@@ -413,7 +428,6 @@ bool CGDALFileManager::Open()
 		return false;
 	}
 	m_HAPFlag = 0;
-	GDALAllRegister();
 	GDALDataset * poDataset = (GDALDataset *)GDALOpen(m_szFileName, GA_ReadOnly);
 	m_poDataset = (void *)poDataset;
 	return true;
@@ -441,6 +455,7 @@ bool CGDALFileManager::SaveHeader(string sFileHeader)
 	strcat(m_header.m_cDescription, dbuffer);
 	strcat(m_header.m_cDescription, ",处理时间: ");
 	_strtime(tbuffer);
+	strcat(m_header.m_cDescription, tbuffer);
 	strcat(m_header.m_cDescription, ",HAPIMG File V1.0 created by spacestartMan");
 	strcpy(m_header.m_cInterLeave, "bsq");
 	m_header.m_nHeaderOffset = 0;
@@ -470,7 +485,7 @@ bool CGDALFileManager::SaveHeader(string sFileHeader)
 		sprintf(l_str2, "map info = {%s, %.4f, %.4f, %.4f, %.4f, %.4e, %.4e",
 			projectName, 1.0, 1.0, m_header.m_MapInfo->m_dLeftUpper[0], m_header.m_MapInfo->m_dLeftUpper[1],
 			m_header.m_MapInfo->m_dPixelSize[0],
-			abs(m_header.m_MapInfo->m_dPixelSize[1]));
+			fabs(m_header.m_MapInfo->m_dPixelSize[1]));
 		l_str1 += l_str2;
 		if (strcmp(projectName, "UTM") == 0 )
 		{
@@ -480,9 +495,14 @@ bool CGDALFileManager::SaveHeader(string sFileHeader)
 			l_str1 += l_str2;
 			if (strcmp(m_header.m_MapInfo->m_cDatum, "WGS_1984") == 0 )
 			{
-				sprintf(l_str2, "units = %s\n", m_header.m_MapInfo->m_cUnit);
-				l_str1 += l_str2;
+				sprintf(l_str2, "%s,units = %s\n", "WGS-84",m_header.m_MapInfo->m_cUnit);
 			}
+			else
+			{
+				sprintf(l_str2, "units = %s\n", m_header.m_MapInfo->m_cUnit);
+		
+			}
+			l_str1 += l_str2;
 		}
 		else
 		{
@@ -515,17 +535,35 @@ bool CGDALFileManager::WWriteBlock2(BYTE * pdata, int bufferSize, int writedoneB
 	int bufferPerBand = bufferSize / band;
 	//获取当前准备存储的文件指针位置
 	__int64 currentPos = ftell(m_OutFile);
+	//获取文件写完后在第一波段的位置
+	long writeDonePos = currentPos + bufferPerBand;
+
 	//开始在每个波段写入数据
+	//解析进入临时文件
+	BYTE * pTempData = new BYTE[bufferPerBand];
 	long i;
 	for ( i = 0; i < band; i++)
 	{
+		//将原始数据拷贝入临时文件
+		memcpy(pTempData, pdata + i * bufferPerBand, bufferPerBand);
 		//文件指针移动
 		//支持超过4G数据的写入寻址
 		_fseeki64(m_OutFile, __int64(i*bytesPerBand + currentPos), 0);
-		fwrite(pdata + i * bufferPerBand, sizeof(BYTE), bufferPerBand, m_OutFile);
+		//写入文件
+		if (bufferSize == writedoneBuffer)
+		{
+			fwrite(pTempData, sizeof(BYTE), bufferPerBand, m_OutFile);
+		}
+		else
+		{
+			fwrite(pTempData, sizeof(BYTE), int(writedoneBuffer/band), m_OutFile);
+
+		}
 	}
-	//支持超过4G数据的写入寻址
-	_fseeki64(m_OutFile, __int64((1 - band) * bytesPerBand), 1);
+	//文件指针复位
+	_fseeki64(m_OutFile, __int64(writedoneBuffer), 0);
+	//释放内存
+	delete[] pTempData;
 	return true;
 }
 
@@ -561,4 +599,39 @@ bool CGDALFileManager::WWriteBlockB(BYTE * pdata, int bufferSize)
 	_fseeki64(m_OutFile, __int64((1 - band) * bytesPerBand), 1);
 	delete pbbandblock;
 	return true;
+}
+
+bool CGDALFileManager::WWriteBlockB(BYTE * pdata, int bufferSize)
+{
+	//获取图像基本信息
+	int width = m_header.m_nSamples;
+	int height = m_header.m_nLines;
+	int band = m_header.m_nBands;
+	int nDt = m_header.getBytesPerPt();
+
+	//获取图像一个波段字节数
+	__int64 bytesPerBand = width * height * nDt;
+	//计算每个波段数要输入的buffer大小
+	int bufferPerBand = bufferSize / band;
+	//获取当前准备存储的文件指针位置
+	__int64 currentPos = ftell(m_OutFile);
+
+	//开始在每个波段写入数据
+	long i;
+	for (i = 0; i < band; i++)
+	{
+		//文件指针移动
+		//支持超过4G数据的写入寻址
+		_fseeki64(m_OutFile, __int64(i*bytesPerBand + currentPos), 0);
+		fwrite(pdata + i * bufferPerBand, sizeof(BYTE), bufferPerBand, m_OutFile);
+	}
+	//支持超过4G数据的写入寻址
+	_fseeki64(m_OutFile, __int64((1 - band) * bytesPerBand), 1);
+	delete pbbandblock;
+	return true;
+}
+
+char * CGDALFileManager::GetErrorMessage()
+{
+	return m_pcErrMessage;
 }

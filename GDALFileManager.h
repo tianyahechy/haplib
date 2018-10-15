@@ -89,6 +89,7 @@ public:
 protected:
 	void SetFileName(const char *filename); //设置图像文件路径
 
+	char * GetErrorMessage();
 	void *m_poDataset; //GDALDataset对象，在用的时候再转换。
 //	int m_iCurBand;//当前波段号标志
 	FILE *m_OutFile;
@@ -96,6 +97,8 @@ protected:
 	char m_szFileName[HAP_MAX_PATH]; //文件名称
 	char m_szHeaderFileName[HAP_MAX_PATH]; //头文件名称
 	int iCutBlockMode; //=0, 默认按行分块读取；
+	static int CGDALFileManager::iNeedDestroyGDAL;
+	char * m_pcErrMessage;
 };
-
+//extern int CGDALFileManager::iNeedDestroyGDAL;
 #endif // !defined(AFX_GDALFILEMANAGER_H__5F0E867D_59AD_4884_A337_BD382A4FD558__INCLUDED_)
