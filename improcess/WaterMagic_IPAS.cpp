@@ -6,6 +6,10 @@
 #include "HAPBEGThreadW.h"
 #include "HAPBEGThreadC.h"
 #include "GDALLib.h"
+//mkdir使用到
+#include <io.h>
+//mkdir使用到
+#include <direct.h>
 
 WaterMagic_IPAS::WaterMagic_IPAS()
 {
@@ -66,9 +70,4 @@ void WaterMagic_IPAS::Set_FileName(const char* fileName)
 		l_str1 = SBaseName + l_str2;
 	}
 	strcpy(m_TempFileName, l_str1.c_str());
-}
-
-bool WaterMagic_IPAS::StandardProcess(DIMS dims, CGDALFileManager * pmgr1, CGDALFileManager * pmgr2)
-{
-	    
 }

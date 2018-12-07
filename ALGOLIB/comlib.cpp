@@ -1,5 +1,8 @@
 #include "include_global.h"
 #include "comlib.h"
+#include <string>
+#include <iostream>
+#include <io.h>
 
 __int64 fsize(FILE * fp)
 {
@@ -25,6 +28,17 @@ sttAlgoProg::sttAlgoProg()
 	strcpy(pcErrorMessage, "");
 	strcpy(pcMessageSort, "´íÎó£¡");
 	ptf = fopen("E:\\TraceFile.txt", "a");
+	ptf = NULL;
+}
+
+sttAlgoProg::~sttAlgoProg()
+{
+	if (ptf)
+	{
+		fprintf(ptf, "\n");
+		fclose(ptf);
+	}
+	ptf = NULL;
 }
 
 void sttAlgoProg::writeDebugMessage(char* pcMes)
@@ -33,16 +47,6 @@ void sttAlgoProg::writeDebugMessage(char* pcMes)
 	{
 		fprintf(ptf, "%s\n", pcMes);
 	}
-}
-
-sttAlgoProg::sttAlgoProg()
-{
-	if (ptf)
-	{
-		fprintf(ptf, "\n");
-		fclose(ptf);
-	}
-	ptf = NULL;
 }
 
 static BOOL ASSERTVALIDPOINTER(void * pointer, char* message)
@@ -60,11 +64,10 @@ CComlib::CComlib()
 
 }
 
-CComlib::CComlib()
+CComlib::~CComlib()
 {
 
 }
-
 void * CComlib::fspace_1d(int col, int length)
 {
 	void * b = (void*)calloc(length, col);
@@ -129,7 +132,7 @@ void CComlib::ffree_2d(void** a, int row)
 
 void CComlib::GetExt(const char* strPathName, char* ext)
 {
-	char * pExt = strrchr((char*)strPathName, ".");
+	char * pExt = strrchr((char*)strPathName, '.');
 	if (NULL == pExt)
 	{
 		strcpy(ext, "");

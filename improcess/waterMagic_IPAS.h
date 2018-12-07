@@ -1,6 +1,8 @@
 
-#include "ImProcess.h"
+#include "ImgProcess.h"
 #include "HAPBEGThreads.h"
+#include "GDALFileManager.h"
+#include "HAPLib.h"
 #include <vector>
 
 #pragma once
@@ -12,7 +14,7 @@ struct st_PointV
 
 };
 
-class IMGPROCESS_API WaterMagic_IPAS : public BASE_IPAS
+class IMGPROCESS_API WaterMagic_IPAS : public Base_IPAS
 {
 public:
 	WaterMagic_IPAS();
@@ -27,7 +29,7 @@ public:
 	bool PreparePara();
 	template <class TT> bool NDWIProcess();
 	//实现对NDWI图像的自动二值化分割
-	bool NDWICut(GDALFileManager* pmgr2 = NULL);
+	bool NDWICut(CGDALFileManager* pmgr2 = NULL);
 	//seedXY[2]会分配内存，类中会释放
 	bool ReadWaterMagicINI(
 		int& iNirBand,
@@ -123,7 +125,7 @@ BOOL TrackSpotBySeedByV3(
 	//fregionvalue不能为0，1，2，3
 	BYTE fRegionValue,
 	//记录生长的外接矩形区域
-	SIMDIMS& stSeedRegion,
+	SimDIMS& stSeedRegion,
 	BOOL bCheck8 = TRUE
 );
 

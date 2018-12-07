@@ -83,7 +83,7 @@ typedef void * HINSTANCE_;
 
 //°æ±¾ºÅ¿ØÖÆ
 #ifndef _VERSION_HAPLIB_NO_
-#define _VERSION_HAPLIB_NO_	1.3
+#define VERSION_HAPLIB_NO	1.3
 #define _VERSION_HAPLIB_NO_
 #endif
 
