@@ -27,7 +27,7 @@ public:
 	DIMS m_DimsIn;
 	//保存错误提示信息，供上层调用
 	char pcErrMessage[64];
-private:
+protected:
 	//输入文件管理指针
 	CGDALFileManager * m_MgrIn;
 	//输出文件管理指针
