@@ -197,6 +197,7 @@
     <ClCompile Include="HAPBEGTBase.cpp" />
     <ClCompile Include="HAPBEGThread.cpp" />
     <ClCompile Include="HAPBEGThreadC.cpp" />
+    <ClCompile Include="HAPBEGThreadS.cpp" />
     <ClCompile Include="hapcfile.cpp" />
     <ClCompile Include="HAPLib.cpp" />
     <ClCompile Include="HPSCEGSBaseTmpl.cpp" />

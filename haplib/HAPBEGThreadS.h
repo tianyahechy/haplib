@@ -2,7 +2,7 @@
 #include "HAPBEGTBase.h"
 USING_NAMESPACE(HAPLIB)
 //影像自动分块读写接口模块，采用多线程方式实现IO，与计算线程同步，
-//读：正方形分块，缓存队列，不适用多线程，依据算法访问需求自由读取缓存块数据
+//读：正方形分块，缓存队列，不使用多线程，依据算法访问需求自由读取缓存块数据
 //写：独立线程，双缓存，满行分块
 class HAPCLASS HAPBEGThreadS : public HAPBEGTBase
 {
@@ -31,34 +31,48 @@ protected:
 		bool InOrOut = true);
 	//获取图像块总数
 	void setBlockNumber(bool InOrOut = false);
+	//通过行列波段号获取图像块范围信息，无法获取范围
+	bool getBlockInfo(long column, long line, long band, SimDIMS * pSBlockInfo);
 	//通过行列波段号获取图像块编号
-	int GetBlockIndex(long column, long line, long band, SimDIMS * pSBlockInfo);
-	//输入DIMS信息
-	DIMS m_DimsIn;
-	//保存错误提示信息，供上层调用
-	char pcErrMessage[64];
-private:
-	//输入文件管理指针
-	CGDALFileManager * m_MgrIn;
-	//输出文件管理指针
-	CGDALFileManager * m_MgrOut;
-	//数据字节长度
-	int m_nPtLength;
-	//输出数据长度
-	int m_nPtLengthOut;
-	//0缓冲区重叠不存在，1-3，缓冲区存在1-3行数据重叠，例如n*n（奇数）模板中值滤波，则需要n-1行数据重叠，保证缓存块交换不会缺少数据。
-	//若n为偶数，则需要n行。重叠区设为偶数，方便输出缓存区位置计算，可以对半分
-	//用于设置缓存区的重叠，部分图像处理算法需要用到，如滤波、插值算法等
-	int m_iBlockOverlap;
-	//警告信息，仅提示用户一次
-	bool m_bAlarmInfo;
-	//线程异常，强迫各个线程退出
-	bool m_bThreadAbnormal;
-	//标记图像IO线程正在工作，告知其他线程不要进行磁盘IO操作
-	static bool m_bIOThreadRun;
-	//输出调试信息
-	FILE * ptf;
-private:
-
+	int GetBlockIndex(long column, long line, long band);
+	//独立写入线程，执行过程中与输出线程互斥
+	//在读线程中负责读缓存区赋值，受保护成员函数，外部无法调用
+	static void independentInThread(void * dummy);
+	int DiskDataToBlockIn();
+	//独立输出线程，执行过程中与写入线程互斥
+	static void IndependentOutThread(void * dummy);
+	int blockOutToDiskData();
+	//队列长度
+	int m_QueueLength;
+	//输入多块缓冲区信息，使用二级指针，保证在队列进出，地址置换时的高效性
+	SimDIMS** m_ppSBlockInInf;
+	//输入多块缓冲区，用于计算
+	BYTE * m_pbBlockIn;
+	//写出内存缓冲区，一级缓冲区
+	BYTE * m_bBlockOut;
+	//输出磁盘缓冲区，二级缓冲区
+	BYTE * m_bBlockOut2;
+	//输入缓冲区大小，暂时没用
+	int m_InBufferSize;
+	//输出一级缓冲区大小，也是缓冲区状态标记
+	int m_outBufferSize;
+	//输出二级缓冲区大小，也是缓冲区状态标记
+	int m_outBufferSize2;
+	//已经输出的像元数，一级写缓冲区状态标记，-1表示缓冲区进入无效状态
+	int m_WriteDoneCount;
+	//输出到磁盘的缓冲区信息
+	SimDIMS m_SBlockOutInf;
+	//0:缓冲区重叠不存在；1-3：缓存区存在1-3行数据重叠，例如n*n（奇数）模板中值滤波，则需要第n-1行数据重叠。保证缓存块交换不会缺少数据。
+	//若n为偶数，则需要n行
+	//重叠区设为偶数，方便输出缓存区位置计算，可以对半分
+	//标记前m_QueueLength图像块编号
+	int m_iCurrentBlockNo;
+	//目前IO写线程读取的图像块，也是读线程执行的标记，从0开始计数，-1表示执行完毕
+	int m_iCurrentOutBlockNo;
+	//图像块总数，用于控制线程结束
+	int m_iBlockNum;
+	int m_iBlockNumOut;
+	//唤醒图像IO读取线程目前可以读数据
+	bool m_bNeedsDataNow;
 
 };
