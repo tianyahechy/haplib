@@ -29,5 +29,8 @@
     <ClCompile Include="HAPLIB.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MyTimer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
