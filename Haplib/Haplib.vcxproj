@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="haplib.h" />
+    <ClInclude Include="MyTimer.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
